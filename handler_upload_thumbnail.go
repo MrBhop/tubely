@@ -11,6 +11,8 @@ import (
 )
 
 func (cfg *apiConfig) handlerUploadThumbnail(w http.ResponseWriter, r *http.Request) {
+	const maxMemory = 1 << 20
+
 	videoIDString := r.PathValue("videoID")
 	videoID, err := uuid.Parse(videoIDString)
 	if err != nil {
@@ -34,7 +36,6 @@ func (cfg *apiConfig) handlerUploadThumbnail(w http.ResponseWriter, r *http.Requ
 	fmt.Println("uploading thumbnail for video", videoID, "by user", userID)
 
 	// TODO: implement the upload here
-	const maxMemory = 10 << 20
 	r.ParseMultipartForm(maxMemory)
 
 	imageFile, header, err := r.FormFile("thumbnail")
@@ -61,12 +62,12 @@ func (cfg *apiConfig) handlerUploadThumbnail(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	video, err := cfg.db.GetVideo(videoID)
+	videoData, err := cfg.db.GetVideo(videoID)
 	if err != nil {
 		respondWithError(w, http.StatusNotFound, "ID does not match any videos", nil)
 		return
 	}
-	if video.UserID.ID() != userID.ID() {
+	if videoData.UserID.ID() != userID.ID() {
 		respondWithError(w, http.StatusUnauthorized, "User is not the owner of the video", nil)
 		return
 	}
@@ -90,11 +91,11 @@ func (cfg *apiConfig) handlerUploadThumbnail(w http.ResponseWriter, r *http.Requ
 	}
 
 	thumbnailUrl := cfg.getAssetURL(assetPath)
-	video.ThumbnailURL = &thumbnailUrl
-	if err := cfg.db.UpdateVideo(video); err != nil {
+	videoData.ThumbnailURL = &thumbnailUrl
+	if err := cfg.db.UpdateVideo(videoData); err != nil {
 		respondWithError(w, http.StatusUnauthorized, "Error updating video information", err)
 		return
 	}
 
-	respondWithJSON(w, http.StatusOK, video)
+	respondWithJSON(w, http.StatusOK, videoData)
 }
