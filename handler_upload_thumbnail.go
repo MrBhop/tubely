@@ -52,11 +52,12 @@ func (cfg *apiConfig) handlerUploadThumbnail(w http.ResponseWriter, r *http.Requ
 
 	switch mediaType {
 	case "image/jpeg":
-	fallthrough
+		fallthrough
 	case "image/png":
-	// do nothing - this is valid.
+		// do nothing - this is valid.
+		break
 	default:
-		respondWithError(w, http.StatusBadRequest, "Invalid Content-Type. Expected image/jpeg or image/png", nil)
+		respondWithError(w, http.StatusBadRequest, "Invalid File Type. Expected image/jpeg or image/png", nil)
 		return
 	}
 

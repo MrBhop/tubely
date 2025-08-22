@@ -17,14 +17,14 @@ func (cfg apiConfig) ensureAssetsDir() error {
 }
 
 func (cfg apiConfig) getAssetURL(assetPath string) string {
-	return fmt.Sprintf("http://localhost:%s/assets/%s", cfg.assetsRoot,  assetPath)
+	return fmt.Sprintf("http://localhost:%s/assets/%s", cfg.port,  assetPath)
 }
 
 func (cfg apiConfig) getAssetDiskPath(assetPath string) string {
 	return filepath.Join(cfg.filepathRoot, assetPath)
 }
 
-func  getAssetPath(videoID uuid.UUID, mediaType string) string {
+func getAssetPath(videoID uuid.UUID, mediaType string) string {
 	extension := mediaTypeToExtension(mediaType)
 	return fmt.Sprintf("%s%s", videoID, extension)
 }
