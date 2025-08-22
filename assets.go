@@ -21,7 +21,7 @@ func (cfg apiConfig) getAssetURL(assetPath string) string {
 }
 
 func (cfg apiConfig) getAssetDiskPath(assetPath string) string {
-	return filepath.Join(cfg.filepathRoot, assetPath)
+	return filepath.Join(cfg.assetsRoot, assetPath)
 }
 
 func getAssetPath(videoID uuid.UUID, mediaType string) string {
