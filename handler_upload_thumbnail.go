@@ -50,6 +50,16 @@ func (cfg *apiConfig) handlerUploadThumbnail(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
+	switch mediaType {
+	case "image/jpeg":
+	fallthrough
+	case "image/png":
+	// do nothing - this is valid.
+	default:
+		respondWithError(w, http.StatusBadRequest, "Invalid Content-Type. Expected image/jpeg or image/png", nil)
+		return
+	}
+
 	video, err := cfg.db.GetVideo(videoID)
 	if err != nil {
 		respondWithError(w, http.StatusNotFound, "ID does not match any videos", nil)
