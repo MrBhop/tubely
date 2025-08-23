@@ -82,7 +82,13 @@ func (cfg *apiConfig) handlerUploadVideo(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
+	aspectRatio, err := getVideoAspectRatio(tempVideoFile.Name())
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Error getting aspect ratio from video", err)
+		return
+	}
 	key, err := getAssetPath(mediaType)
+	key = fmt.Sprintf("%s/%s", aspectRatio, key)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Failed to generate asset path", err)
 		return

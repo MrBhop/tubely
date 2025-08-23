@@ -1,10 +1,14 @@
 package main
 
 import (
+	"bytes"
 	"crypto/rand"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
+	"math"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 )
@@ -44,4 +48,53 @@ func mediaTypeToExtension(mediaType string) string {
 	}
 
 	return "." + parts[1]
+}
+
+func getVideoAspectRatio(filePath string) (string, error) {
+	type ffprobeOutput struct {
+		Streams []struct {
+			Width  int `json:"width"`
+			Height int `json:"height"`
+		} `json:"streams"`
+	}
+
+	command := exec.Command("ffprobe", "-v", "error", "-print_format", "json", "-show_streams", filePath)
+	commandOutput := bytes.Buffer{}
+	command.Stdout = &commandOutput
+	err := command.Run()
+	if err != nil {
+		return "", err
+	}
+
+	var videoInformation ffprobeOutput
+	decoder := json.NewDecoder(&commandOutput)
+	if err := decoder.Decode(&videoInformation); err != nil {
+		return "", err
+	}
+	
+	width := videoInformation.Streams[0].Width
+	height := videoInformation.Streams[0].Height
+	trueAspectRatio := float64(width) / float64(height)
+
+	const (
+		aspectRatio169 float64 = float64(16) / float64(9)
+		aspectRatio916 float64 = float64(9) / float64(16)
+	)
+
+	if isAspectRatio(trueAspectRatio, aspectRatio169) {
+		return "landscape", nil
+	}
+	if isAspectRatio(trueAspectRatio, aspectRatio916) {
+		return "portrait", nil
+	}
+	return "other", nil
+}
+
+func isAspectRatio(value, checkAgainst float64) bool {
+	const tolerance = 0.01
+
+	if math.Abs(value - checkAgainst) < tolerance {
+		return true
+	}
+	return false
 }
