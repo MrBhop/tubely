@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"crypto/rand"
 	"encoding/base64"
 	"encoding/json"
@@ -11,6 +12,9 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"time"
+
+	"github.com/aws/aws-sdk-go-v2/service/s3"
 )
 
 func (cfg apiConfig) ensureAssetsDir() error {
@@ -97,4 +101,17 @@ func isAspectRatio(value, checkAgainst float64) bool {
 		return true
 	}
 	return false
+}
+
+func generatePresignedURL(s3Client *s3.Client, bucket, key string, expireTime time.Duration) (string, error) {
+	signedClient := s3.NewPresignClient(s3Client)
+	signedRequest, err := signedClient.PresignGetObject(context.TODO(), &s3.GetObjectInput{
+		Key: &key,
+		Bucket: &bucket,
+	}, s3.WithPresignExpires(expireTime))
+	if err != nil {
+		return "", err
+	}
+
+	return signedRequest.URL, nil
 }

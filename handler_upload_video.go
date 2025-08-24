@@ -7,9 +7,12 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"strings"
+	"time"
 
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/bootdotdev/learn-file-storage-s3-golang-starter/internal/auth"
+	"github.com/bootdotdev/learn-file-storage-s3-golang-starter/internal/database"
 	"github.com/google/uuid"
 )
 
@@ -118,14 +121,24 @@ func (cfg *apiConfig) handlerUploadVideo(w http.ResponseWriter, r *http.Request)
 		return
 	}
 	
-	videoUrl := cfg.getObjectURL(key)
-	videoData.VideoURL = &videoUrl
+	newVideoUrl := fmt.Sprintf("%s,%s", cfg.s3Bucket, key)
+	videoData.VideoURL = &newVideoUrl
 	if err := cfg.db.UpdateVideo(videoData); err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Error updating video information", err)
 		return
 	}
 
-	respondWithJSON(w, http.StatusOK, videoData)
+	cfg.respondWithVideo(w, http.StatusOK, videoData)
+}
+
+func (cfg *apiConfig) respondWithVideo(w http.ResponseWriter, code int, video database.Video) {
+	presignedVideo, err := cfg.dbVideoToSignedVideo(video)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Error, generating presigned video url", err)
+		return
+	}
+
+	respondWithJSON(w, code, presignedVideo)
 }
 
 func processVideoForFastStart(filePath string) (string, error) {
@@ -136,4 +149,24 @@ func processVideoForFastStart(filePath string) (string, error) {
 	}
 
 	return outputPath, nil
+}
+
+func (cfg *apiConfig) dbVideoToSignedVideo(video database.Video) (database.Video, error) {
+	// if the video url is nil, there's nothing to sign.
+	if video.VideoURL == nil {
+		return video, nil
+	}
+
+	parts := strings.Split(*video.VideoURL, ",")
+	if length := len(parts); length != 2 {
+		return video, fmt.Errorf("Expected two comma delimited parts, got %d", length)
+	}
+
+	presignedUrl, err := generatePresignedURL(cfg.s3Client, parts[0], parts[1], 10 * time.Minute)
+	if err != nil {
+		return video, fmt.Errorf("Error generating presigned url: %v", err)
+	}
+	video.VideoURL = &presignedUrl
+
+	return video, nil
 }
